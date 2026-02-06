@@ -1,0 +1,1343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NHL Team Wordle</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&family=Oswald:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --gold: #d4af37;
+            --light-gold: #f4e5a0;
+            --dark-gold: #b8941f;
+            --navy: #001f3f;
+            --red: #e63946;
+            --green: #06d6a0;
+            --yellow: #ffd166;
+            --dark-bg: #1a1a1a;
+            --darker-bg: #0d0d0d;
+            --card-bg: #2a2a2a;
+            --text: #ffffff;
+            --grey: #808080;
+            --light-grey: #b0b0b0;
+        }
+
+        body {
+            font-family: 'Roboto Condensed', sans-serif;
+            background: linear-gradient(135deg, var(--darker-bg) 0%, var(--dark-bg) 50%, var(--darker-bg) 100%);
+            min-height: 100vh;
+            color: var(--text);
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        h1 {
+            font-family: 'Oswald', sans-serif;
+            font-size: 3.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--light-gold) 50%, var(--gold) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.05em;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--light-grey);
+            opacity: 0.8;
+        }
+
+        .game-section {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .search-box {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        #teamSearch {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.2rem;
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            border-radius: 15px;
+            background: rgba(42, 42, 42, 0.8);
+            color: var(--text);
+            font-family: 'Roboto Condensed', sans-serif;
+            transition: all 0.3s;
+        }
+
+        #teamSearch:focus {
+            outline: none;
+            border-color: var(--gold);
+            background: rgba(42, 42, 42, 1);
+        }
+
+        #teamSearch::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--card-bg);
+            border: 2px solid rgba(212, 175, 55, 0.3);
+            border-top: none;
+            border-radius: 0 0 15px 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+        }
+
+        .suggestions.active {
+            display: block;
+        }
+
+        .suggestion-item {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .suggestion-item:hover {
+            background: rgba(212, 175, 55, 0.1);
+        }
+
+        .suggestion-item.guessed {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .suggestion-item.guessed:hover {
+            background: transparent;
+        }
+
+        .suggestion-logo {
+            width: 40px;
+            height: 40px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+
+        .guesses-container {
+            margin-top: 2rem;
+        }
+
+        .guess-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .guess-row {
+            display: grid;
+            grid-template-columns: 80px repeat(6, 1fr);
+            gap: 0.5rem;
+            align-items: center;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .guess-logo {
+            width: 70px;
+            height: 70px;
+            object-fit: contain;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 0.5rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--gold);
+        }
+
+        .guess-logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        .guess-cell {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 1rem 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.5s;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+        }
+
+        .guess-cell.correct {
+            background: var(--green);
+            color: var(--dark-bg);
+            animation: bounce 0.6s;
+        }
+
+        .guess-cell.incorrect {
+            background: var(--red);
+            color: var(--text);
+            opacity: 0.7;
+        }
+
+        .guess-cell.close {
+            background: var(--yellow);
+            color: var(--dark-bg);
+            opacity: 0.9;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .category-header {
+            display: grid;
+            grid-template-columns: 80px repeat(6, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            color: var(--gold);
+            letter-spacing: 0.05em;
+        }
+
+        .category-header div {
+            text-align: center;
+            padding: 0.5rem;
+        }
+
+        .category-header div:first-child {
+            text-align: center;
+        }
+
+        .win-message {
+            background: linear-gradient(135deg, var(--green) 0%, #04aa7a 100%);
+            color: var(--dark-bg);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .loss-message {
+            background: linear-gradient(135deg, var(--red) 0%, #c62e3a 100%);
+            color: var(--text);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 3rem;
+            margin-top: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .give-up-btn {
+            padding: 0.6rem 1.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--light-grey);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            font-family: 'Roboto Condensed', sans-serif;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .give-up-btn:hover {
+            background: rgba(230, 57, 70, 0.2);
+            border-color: var(--red);
+            color: var(--red);
+            transform: translateY(-2px);
+        }
+
+        .action-btn {
+            padding: 0.8rem 2rem;
+            background: linear-gradient(135deg, var(--gold) 0%, var(--dark-gold) 100%);
+            color: var(--dark-bg);
+            border: none;
+            border-radius: 10px;
+            font-family: 'Roboto Condensed', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .loss-message {
+            background: linear-gradient(135deg, rgba(230, 57, 70, 0.8) 0%, rgba(230, 57, 70, 0.6) 100%);
+            color: var(--text);
+            padding: 2rem;
+            border-radius: 15px;
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        .instructions {
+            background: rgba(212, 175, 55, 0.05);
+            border-left: 4px solid var(--gold);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin-bottom: 2rem;
+        }
+
+        .instructions h3 {
+            color: var(--gold);
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions p {
+            line-height: 1.6;
+            color: var(--light-grey);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5rem;
+            }
+
+            .guess-row {
+                grid-template-columns: 60px repeat(6, 1fr);
+                gap: 0.25rem;
+            }
+
+            .category-header {
+                grid-template-columns: 60px repeat(6, 1fr);
+                gap: 0.25rem;
+                font-size: 0.7rem;
+            }
+
+            .guess-logo {
+                width: 50px;
+                height: 50px;
+            }
+
+            .guess-cell {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.75rem;
+                min-height: 50px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>NHL TEAM WORDLE</h1>
+            <p class="subtitle">Guess the mystery NHL team!</p>
+        </header>
+
+        <div class="game-section">
+            <div class="instructions">
+                <h3>How to Play</h3>
+                <p>Type to search for an NHL team and select it. Green boxes mean the category matches the mystery team. Yellow means close (within 10% for capacity, or within 500 miles for city). Red boxes mean it doesn't match. You have 6 guesses to find the right team!</p>
+            </div>
+
+            <div class="search-box">
+                <input 
+                    type="text" 
+                    id="teamSearch" 
+                    placeholder="Search for an NHL team..."
+                    autocomplete="off"
+                >
+                <div class="suggestions" id="suggestions"></div>
+            </div>
+
+            <div class="category-header">
+                <div></div>
+                <div>Conference</div>
+                <div>Division</div>
+                <div>Capacity</div>
+                <div>Last Cup</div>
+                <div>Mascot Type</div>
+                <div>City</div>
+            </div>
+
+            <div class="guesses-container">
+                <div class="guess-grid" id="guessGrid"></div>
+            </div>
+
+            <div id="winMessage"></div>
+        </div>
+
+        <div class="stats">
+            <div>Guesses: <span id="guessCount">0</span></div>
+            <button onclick="giveUp()" id="giveUpBtn" class="give-up-btn">Give Up</button>
+        </div>
+    </div>
+
+    <script>
+        // NHL Teams Data Structure
+        const nhlTeams = [
+            // Atlantic Division
+            {
+                name: "Boston Bruins",
+                abbrev: "BOS",
+                city: "Boston",
+                lat: 42.3662,
+                lon: -71.0621,
+                conference: "Eastern",
+                division: "Atlantic",
+                capacity: 17850,
+                lastChampionship: 2011,
+                mascotType: "Dangerous Animal",
+                teamName: "Bruins",
+                logo: "https://assets.nhle.com/logos/nhl/svg/BOS_light.svg"
+            },
+            {
+                name: "Buffalo Sabres",
+                abbrev: "BUF",
+                city: "Buffalo",
+                lat: 42.8750,
+                lon: -78.8764,
+                conference: "Eastern",
+                division: "Atlantic",
+                capacity: 19070,
+                lastChampionship: null,
+                mascotType: "Weapon/Military",
+                teamName: "Sabres",
+                logo: "https://assets.nhle.com/logos/nhl/svg/BUF_light.svg"
+            },
+            {
+                name: "Detroit Red Wings",
+                abbrev: "DET",
+                city: "Detroit",
+                lat: 42.3409,
+                lon: -83.0552,
+                conference: "Eastern",
+                division: "Atlantic",
+                capacity: 19515,
+                lastChampionship: 2008,
+                mascotType: "Mythical Creature",
+                teamName: "Red Wings",
+                logo: "https://assets.nhle.com/logos/nhl/svg/DET_light.svg"
+            },
+            {
+                name: "Florida Panthers",
+                abbrev: "FLA",
+                city: "Sunrise",
+                lat: 26.1583,
+                lon: -80.3258,
+                conference: "Eastern",
+                division: "Atlantic",
+                capacity: 19250,
+                lastChampionship: 2024,
+                mascotType: "Dangerous Animal",
+                teamName: "Panthers",
+                logo: "https://assets.nhle.com/logos/nhl/svg/FLA_light.svg"
+            },
+            {
+                name: "Montreal Canadiens",
+                abbrev: "MTL",
+                city: "Montreal",
+                lat: 45.4960,
+                lon: -73.5694,
+                conference: "Eastern",
+                division: "Atlantic",
+                capacity: 21105,
+                lastChampionship: 1993,
+                mascotType: "People/Culture",
+                teamName: "Canadiens",
+                logo: "https://assets.nhle.com/logos/nhl/svg/MTL_light.svg"
+            },
+            {
+                name: "Ottawa Senators",
+                abbrev: "OTT",
+                city: "Ottawa",
+                lat: 45.2968,
+                lon: -75.9270,
+                conference: "Eastern",
+                division: "Atlantic",
+                capacity: 18652,
+                lastChampionship: null,
+                mascotType: "Royalty/Nobility",
+                teamName: "Senators",
+                logo: "https://assets.nhle.com/logos/nhl/svg/OTT_light.svg"
+            },
+            {
+                name: "Tampa Bay Lightning",
+                abbrev: "TBL",
+                city: "Tampa",
+                lat: 27.9426,
+                lon: -82.4517,
+                conference: "Eastern",
+                division: "Atlantic",
+                capacity: 19092,
+                lastChampionship: 2021,
+                mascotType: "Natural Phenomenon",
+                teamName: "Lightning",
+                logo: "https://assets.nhle.com/logos/nhl/svg/TBL_light.svg"
+            },
+            {
+                name: "Toronto Maple Leafs",
+                abbrev: "TOR",
+                city: "Toronto",
+                lat: 43.6435,
+                lon: -79.3791,
+                conference: "Eastern",
+                division: "Atlantic",
+                capacity: 18800,
+                lastChampionship: 1967,
+                mascotType: "Nature/Plant",
+                teamName: "Maple Leafs",
+                logo: "https://assets.nhle.com/logos/nhl/svg/TOR_light.svg"
+            },
+            // Metropolitan Division
+            {
+                name: "Carolina Hurricanes",
+                abbrev: "CAR",
+                city: "Raleigh",
+                lat: 35.8033,
+                lon: -78.7219,
+                conference: "Eastern",
+                division: "Metropolitan",
+                capacity: 18680,
+                lastChampionship: 2006,
+                mascotType: "Natural Phenomenon",
+                teamName: "Hurricanes",
+                logo: "https://assets.nhle.com/logos/nhl/svg/CAR_light.svg"
+            },
+            {
+                name: "Columbus Blue Jackets",
+                abbrev: "CBJ",
+                city: "Columbus",
+                lat: 39.9693,
+                lon: -83.0061,
+                conference: "Eastern",
+                division: "Metropolitan",
+                capacity: 18500,
+                lastChampionship: null,
+                mascotType: "Weapon/Military",
+                teamName: "Blue Jackets",
+                logo: "https://assets.nhle.com/logos/nhl/svg/CBJ_light.svg"
+            },
+            {
+                name: "New Jersey Devils",
+                abbrev: "NJD",
+                city: "Newark",
+                lat: 40.7338,
+                lon: -74.1710,
+                conference: "Eastern",
+                division: "Metropolitan",
+                capacity: 16514,
+                lastChampionship: 2003,
+                mascotType: "Mythical Creature",
+                teamName: "Devils",
+                logo: "https://assets.nhle.com/logos/nhl/svg/NJD_light.svg"
+            },
+            {
+                name: "New York Islanders",
+                abbrev: "NYI",
+                city: "Elmont",
+                lat: 40.7128,
+                lon: -73.5901,
+                conference: "Eastern",
+                division: "Metropolitan",
+                capacity: 17255,
+                lastChampionship: 1983,
+                mascotType: "People/Culture",
+                teamName: "Islanders",
+                logo: "https://assets.nhle.com/logos/nhl/svg/NYI_light.svg"
+            },
+            {
+                name: "New York Rangers",
+                abbrev: "NYR",
+                city: "New York",
+                lat: 40.7505,
+                lon: -73.9934,
+                conference: "Eastern",
+                division: "Metropolitan",
+                capacity: 18006,
+                lastChampionship: 1994,
+                mascotType: "Weapon/Military",
+                teamName: "Rangers",
+                logo: "https://assets.nhle.com/logos/nhl/svg/NYR_light.svg"
+            },
+            {
+                name: "Philadelphia Flyers",
+                abbrev: "PHI",
+                city: "Philadelphia",
+                lat: 39.9012,
+                lon: -75.1720,
+                conference: "Eastern",
+                division: "Metropolitan",
+                capacity: 19537,
+                lastChampionship: 1975,
+                mascotType: "Aviation/Flight",
+                teamName: "Flyers",
+                logo: "https://assets.nhle.com/logos/nhl/svg/PHI_light.svg"
+            },
+            {
+                name: "Pittsburgh Penguins",
+                abbrev: "PIT",
+                city: "Pittsburgh",
+                lat: 40.4396,
+                lon: -79.9892,
+                conference: "Eastern",
+                division: "Metropolitan",
+                capacity: 18387,
+                lastChampionship: 2017,
+                mascotType: "Dangerous Animal",
+                teamName: "Penguins",
+                logo: "https://assets.nhle.com/logos/nhl/svg/PIT_light.svg"
+            },
+            {
+                name: "Washington Capitals",
+                abbrev: "WSH",
+                city: "Washington",
+                lat: 38.8981,
+                lon: -77.0209,
+                conference: "Eastern",
+                division: "Metropolitan",
+                capacity: 18573,
+                lastChampionship: 2018,
+                mascotType: "Royalty/Nobility",
+                teamName: "Capitals",
+                logo: "https://assets.nhle.com/logos/nhl/svg/WSH_light.svg"
+            },
+            // Central Division
+            {
+                name: "Arizona Coyotes",
+                abbrev: "ARI",
+                city: "Tempe",
+                lat: 33.4484,
+                lon: -111.9761,
+                conference: "Western",
+                division: "Central",
+                capacity: 17125,
+                lastChampionship: null,
+                mascotType: "Dangerous Animal",
+                teamName: "Coyotes",
+                logo: "https://assets.nhle.com/logos/nhl/svg/ARI_light.svg"
+            },
+            {
+                name: "Chicago Blackhawks",
+                abbrev: "CHI",
+                city: "Chicago",
+                lat: 41.8807,
+                lon: -87.6742,
+                conference: "Western",
+                division: "Central",
+                capacity: 19717,
+                lastChampionship: 2015,
+                mascotType: "Dangerous Animal",
+                teamName: "Blackhawks",
+                logo: "https://assets.nhle.com/logos/nhl/svg/CHI_light.svg"
+            },
+            {
+                name: "Colorado Avalanche",
+                abbrev: "COL",
+                city: "Denver",
+                lat: 39.7487,
+                lon: -105.0077,
+                conference: "Western",
+                division: "Central",
+                capacity: 18007,
+                lastChampionship: 2022,
+                mascotType: "Natural Phenomenon",
+                teamName: "Avalanche",
+                logo: "https://assets.nhle.com/logos/nhl/svg/COL_light.svg"
+            },
+            {
+                name: "Dallas Stars",
+                abbrev: "DAL",
+                city: "Dallas",
+                lat: 32.7905,
+                lon: -96.8103,
+                conference: "Western",
+                division: "Central",
+                capacity: 18532,
+                lastChampionship: 1999,
+                mascotType: "Nature/Plant",
+                teamName: "Stars",
+                logo: "https://assets.nhle.com/logos/nhl/svg/DAL_light.svg"
+            },
+            {
+                name: "Minnesota Wild",
+                abbrev: "MIN",
+                city: "St. Paul",
+                lat: 44.9446,
+                lon: -93.1011,
+                conference: "Western",
+                division: "Central",
+                capacity: 17954,
+                lastChampionship: null,
+                mascotType: "Nature/Plant",
+                teamName: "Wild",
+                logo: "https://assets.nhle.com/logos/nhl/svg/MIN_light.svg"
+            },
+            {
+                name: "Nashville Predators",
+                abbrev: "NSH",
+                city: "Nashville",
+                lat: 36.1591,
+                lon: -86.7785,
+                conference: "Western",
+                division: "Central",
+                capacity: 17159,
+                lastChampionship: null,
+                mascotType: "Dangerous Animal",
+                teamName: "Predators",
+                logo: "https://assets.nhle.com/logos/nhl/svg/NSH_light.svg"
+            },
+            {
+                name: "St. Louis Blues",
+                abbrev: "STL",
+                city: "St. Louis",
+                lat: 38.6266,
+                lon: -90.2026,
+                conference: "Western",
+                division: "Central",
+                capacity: 18096,
+                lastChampionship: 2019,
+                mascotType: "People/Culture",
+                teamName: "Blues",
+                logo: "https://assets.nhle.com/logos/nhl/svg/STL_light.svg"
+            },
+            {
+                name: "Utah Mammoth",
+                abbrev: "UTA",
+                city: "Salt Lake City",
+                lat: 40.7683,
+                lon: -111.9011,
+                conference: "Western",
+                division: "Central",
+                capacity: 16200,
+                lastChampionship: null,
+                mascotType: "Mythical Creature",
+                teamName: "Mammoth",
+                logo: "https://assets.nhle.com/logos/nhl/svg/UTA_light.svg"
+            },
+            {
+                name: "Winnipeg Jets",
+                abbrev: "WPG",
+                city: "Winnipeg",
+                lat: 49.8929,
+                lon: -97.1436,
+                conference: "Western",
+                division: "Central",
+                capacity: 15325,
+                lastChampionship: null,
+                mascotType: "Aviation/Flight",
+                teamName: "Jets",
+                logo: "https://assets.nhle.com/logos/nhl/svg/WPG_light.svg"
+            },
+            // Pacific Division
+            {
+                name: "Anaheim Ducks",
+                abbrev: "ANA",
+                city: "Anaheim",
+                lat: 33.8075,
+                lon: -117.8765,
+                conference: "Western",
+                division: "Pacific",
+                capacity: 17174,
+                lastChampionship: 2007,
+                mascotType: "Dangerous Animal",
+                teamName: "Ducks",
+                logo: "https://assets.nhle.com/logos/nhl/svg/ANA_light.svg"
+            },
+            {
+                name: "Calgary Flames",
+                abbrev: "CGY",
+                city: "Calgary",
+                lat: 51.0375,
+                lon: -114.0519,
+                conference: "Western",
+                division: "Pacific",
+                capacity: 19289,
+                lastChampionship: 1989,
+                mascotType: "Natural Phenomenon",
+                teamName: "Flames",
+                logo: "https://assets.nhle.com/logos/nhl/svg/CGY_light.svg"
+            },
+            {
+                name: "Edmonton Oilers",
+                abbrev: "EDM",
+                city: "Edmonton",
+                lat: 53.5467,
+                lon: -113.4969,
+                conference: "Western",
+                division: "Pacific",
+                capacity: 18347,
+                lastChampionship: 1990,
+                mascotType: "People/Culture",
+                teamName: "Oilers",
+                logo: "https://assets.nhle.com/logos/nhl/svg/EDM_light.svg"
+            },
+            {
+                name: "Los Angeles Kings",
+                abbrev: "LAK",
+                city: "Los Angeles",
+                lat: 34.0430,
+                lon: -118.2673,
+                conference: "Western",
+                division: "Pacific",
+                capacity: 18230,
+                lastChampionship: 2014,
+                mascotType: "Royalty/Nobility",
+                teamName: "Kings",
+                logo: "https://assets.nhle.com/logos/nhl/svg/LAK_light.svg"
+            },
+            {
+                name: "San Jose Sharks",
+                abbrev: "SJS",
+                city: "San Jose",
+                lat: 37.3327,
+                lon: -121.9010,
+                conference: "Western",
+                division: "Pacific",
+                capacity: 17562,
+                lastChampionship: null,
+                mascotType: "Dangerous Animal",
+                teamName: "Sharks",
+                logo: "https://assets.nhle.com/logos/nhl/svg/SJS_light.svg"
+            },
+            {
+                name: "Seattle Kraken",
+                abbrev: "SEA",
+                city: "Seattle",
+                lat: 47.6219,
+                lon: -122.3540,
+                conference: "Western",
+                division: "Pacific",
+                capacity: 17151,
+                lastChampionship: null,
+                mascotType: "Mythical Creature",
+                teamName: "Kraken",
+                logo: "https://assets.nhle.com/logos/nhl/svg/SEA_light.svg"
+            },
+            {
+                name: "Vancouver Canucks",
+                abbrev: "VAN",
+                city: "Vancouver",
+                lat: 49.2778,
+                lon: -123.1089,
+                conference: "Western",
+                division: "Pacific",
+                capacity: 18910,
+                lastChampionship: null,
+                mascotType: "People/Culture",
+                teamName: "Canucks",
+                logo: "https://assets.nhle.com/logos/nhl/svg/VAN_light.svg"
+            },
+            {
+                name: "Vegas Golden Knights",
+                abbrev: "VGK",
+                city: "Las Vegas",
+                lat: 36.1027,
+                lon: -115.1784,
+                conference: "Western",
+                division: "Pacific",
+                capacity: 17500,
+                lastChampionship: 2023,
+                mascotType: "Royalty/Nobility",
+                teamName: "Golden Knights",
+                logo: "https://assets.nhle.com/logos/nhl/svg/VGK_light.svg"
+            }
+        ];
+
+        // Game State
+        let mysteryTeam = null;
+        let guesses = [];
+        let gameWon = false;
+        let gameOver = false;
+
+        // Get today's date as a seed for consistent daily puzzle
+        function getTodaysSeed() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = now.getMonth() + 1;
+            const day = now.getDate();
+            return `${year}-${month}-${day}`;
+        }
+
+        // Simple hash function to convert date string to a number
+        function hashCode(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash);
+        }
+
+        // Get stats from localStorage
+        function getStats() {
+            const stored = localStorage.getItem('nhlWordleStats');
+            if (stored) {
+                return JSON.parse(stored);
+            }
+            return {
+                gamesPlayed: 0,
+                gamesWon: 0,
+                currentStreak: 0,
+                maxStreak: 0,
+                lastPlayedDate: null,
+                lastResult: null
+            };
+        }
+
+        // Save stats to localStorage
+        function saveStats(stats) {
+            localStorage.setItem('nhlWordleStats', JSON.stringify(stats));
+        }
+
+        // Check if already played today
+        function hasPlayedToday() {
+            const stats = getStats();
+            return stats.lastPlayedDate === getTodaysSeed();
+        }
+
+        // Update stats after game ends
+        function updateStats(won) {
+            const stats = getStats();
+            const today = getTodaysSeed();
+            
+            // Check if this is a new day
+            if (stats.lastPlayedDate !== today) {
+                stats.gamesPlayed++;
+                
+                if (won) {
+                    stats.gamesWon++;
+                    
+                    // Update streak
+                    const yesterday = new Date();
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    const yesterdaySeed = `${yesterday.getFullYear()}-${yesterday.getMonth() + 1}-${yesterday.getDate()}`;
+                    
+                    if (stats.lastPlayedDate === yesterdaySeed && stats.lastResult === 'won') {
+                        stats.currentStreak++;
+                    } else {
+                        stats.currentStreak = 1;
+                    }
+                    
+                    stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
+                    stats.lastResult = 'won';
+                } else {
+                    stats.currentStreak = 0;
+                    stats.lastResult = 'lost';
+                }
+                
+                stats.lastPlayedDate = today;
+                saveStats(stats);
+            }
+        }
+
+        // Generate share text
+        function generateShareText() {
+            const guessEmojis = guesses.map(guess => {
+                const conferenceMatch = guess.conference === mysteryTeam.conference;
+                const divisionMatch = guess.division === mysteryTeam.division;
+                const capacityExact = guess.capacity === mysteryTeam.capacity;
+                const capacityClose = !capacityExact && Math.abs((guess.capacity - mysteryTeam.capacity) / mysteryTeam.capacity) <= 0.10;
+                const championshipMatch = guess.lastChampionship === mysteryTeam.lastChampionship;
+                const mascotMatch = guess.mascotType === mysteryTeam.mascotType;
+                const cityExact = guess.city === mysteryTeam.city;
+                const cityClose = !cityExact && calculateDistance(guess.lat, guess.lon, mysteryTeam.lat, mysteryTeam.lon) <= 500;
+                
+                return [
+                    conferenceMatch ? '🟩' : '🟥',
+                    divisionMatch ? '🟩' : '🟥',
+                    capacityExact ? '🟩' : (capacityClose ? '🟨' : '🟥'),
+                    championshipMatch ? '🟩' : '🟥',
+                    mascotMatch ? '🟩' : '🟥',
+                    cityExact ? '🟩' : (cityClose ? '🟨' : '🟥')
+                ].join('');
+            }).join('\n');
+            
+            const result = gameWon ? `${guesses.length}/6` : 'X/6';
+            return `NHL Wordle ${getTodaysSeed()}\n${result}\n\n${guessEmojis}`;
+        }
+
+        // Calculate distance between two coordinates in miles using Haversine formula
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 3959; // Earth's radius in miles
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                     Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                     Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        // Initialize game
+        function initGame() {
+            const seed = hashCode(getTodaysSeed());
+            const teamIndex = seed % nhlTeams.length;
+            mysteryTeam = nhlTeams[teamIndex];
+            console.log("Mystery team:", mysteryTeam.name); // For testing
+            
+            // Check if already played today and show completion message
+            if (hasPlayedToday()) {
+                const stats = getStats();
+                showStatsDisplay();
+            }
+        }
+
+        // Search functionality
+        const searchInput = document.getElementById('teamSearch');
+        const suggestionsDiv = document.getElementById('suggestions');
+
+        // Show all teams when clicking on search
+        searchInput.addEventListener('focus', (e) => {
+            showSuggestions('');
+        });
+
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase().trim();
+            showSuggestions(searchTerm);
+        });
+
+        function showSuggestions(searchTerm) {
+            // Don't show suggestions if game is over
+            if (gameOver) {
+                suggestionsDiv.classList.remove('active');
+                return;
+            }
+
+            let filtered;
+            
+            if (searchTerm.length === 0) {
+                // Show all teams when no search term
+                filtered = nhlTeams;
+            } else {
+                // Filter by search term
+                filtered = nhlTeams.filter(team => 
+                    team.name.toLowerCase().includes(searchTerm) ||
+                    team.city.toLowerCase().includes(searchTerm)
+                );
+            }
+
+            if (filtered.length > 0) {
+                suggestionsDiv.innerHTML = filtered.map(team => {
+                    const alreadyGuessed = guesses.some(g => g.name === team.name);
+                    const classes = alreadyGuessed ? 'suggestion-item guessed' : 'suggestion-item';
+                    return `
+                        <div class="${classes}" data-team="${team.name}">
+                            <img src="${team.logo}" alt="${team.name}" class="suggestion-logo">
+                            <span>${team.name}</span>
+                        </div>
+                    `;
+                }).join('');
+                suggestionsDiv.classList.add('active');
+            } else {
+                suggestionsDiv.classList.remove('active');
+            }
+        }
+
+        // Handle suggestion clicks
+        suggestionsDiv.addEventListener('click', (e) => {
+            const item = e.target.closest('.suggestion-item');
+            if (item && !gameWon && !item.classList.contains('guessed')) {
+                const teamName = item.dataset.team;
+                makeGuess(teamName);
+                searchInput.value = '';
+                suggestionsDiv.classList.remove('active');
+            }
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-box')) {
+                suggestionsDiv.classList.remove('active');
+            }
+        });
+
+        function makeGuess(teamName) {
+            const guessedTeam = nhlTeams.find(t => t.name === teamName);
+            if (!guessedTeam || guesses.some(g => g.name === teamName) || gameOver) {
+                return; // Already guessed or game over
+            }
+
+            guesses.push(guessedTeam);
+            renderGuess(guessedTeam);
+            
+            document.getElementById('guessCount').textContent = guesses.length;
+
+            if (guessedTeam.name === mysteryTeam.name) {
+                gameWon = true;
+                gameOver = true;
+                updateStats(true);
+                showWinMessage();
+            } else if (guesses.length >= 6) {
+                // Lost the game after 6 guesses
+                gameOver = true;
+                updateStats(false);
+                showLossMessage();
+            }
+        }
+
+        function showLossMessage() {
+            const stats = getStats();
+            const winMessage = document.getElementById('winMessage');
+            winMessage.className = 'loss-message';
+            winMessage.innerHTML = `
+                <div>😔 Game Over!</div>
+                <div style="margin-top: 1rem; font-size: 1.5rem;">
+                    The answer was: <strong>${mysteryTeam.name}</strong>
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 1rem; opacity: 0.9;">
+                    ${mysteryTeam.city} | ${mysteryTeam.conference} Conference | ${mysteryTeam.division} Division
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <button onclick="shareResults()" class="action-btn">📋 Share</button>
+                </div>
+                <div style="margin-top: 2rem; font-size: 1rem; opacity: 0.9;">
+                    <div><strong>Stats:</strong></div>
+                    <div style="display: flex; gap: 2rem; justify-content: center; margin-top: 0.5rem;">
+                        <div>Played: ${stats.gamesPlayed}</div>
+                        <div>Win Rate: ${stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0}%</div>
+                        <div>Streak: ${stats.currentStreak}</div>
+                        <div>Max: ${stats.maxStreak}</div>
+                    </div>
+                </div>
+            `;
+            searchInput.disabled = true;
+        }
+
+        function renderGuess(guessedTeam) {
+            const guessGrid = document.getElementById('guessGrid');
+            const row = document.createElement('div');
+            row.className = 'guess-row';
+
+            // Helper function to determine match status for capacity
+            const getCapacityClass = (guessCapacity, mysteryCapacity) => {
+                if (guessCapacity === mysteryCapacity) {
+                    return 'correct';
+                }
+                const percentDiff = Math.abs((guessCapacity - mysteryCapacity) / mysteryCapacity);
+                if (percentDiff <= 0.10) {
+                    return 'close'; // Within 10%
+                }
+                return 'incorrect';
+            };
+
+            // Helper function for city with distance calculation
+            const getCityClass = (guessTeam, mysteryTeam) => {
+                if (guessTeam.city === mysteryTeam.city) {
+                    return 'correct';
+                }
+                const distance = calculateDistance(guessTeam.lat, guessTeam.lon, mysteryTeam.lat, mysteryTeam.lon);
+                if (distance <= 500) {
+                    return 'close'; // Within 500 miles
+                }
+                return 'incorrect';
+            };
+
+            // Helper function for other fields
+            const getClass = (guessValue, mysteryValue) => {
+                return guessValue === mysteryValue ? 'correct' : 'incorrect';
+            };
+
+            row.innerHTML = `
+                <div class="guess-logo">
+                    <img src="${guessedTeam.logo}" alt="${guessedTeam.abbrev}" onerror="this.style.display='none'; this.parentElement.innerHTML='${guessedTeam.abbrev}';">
+                </div>
+                <div class="guess-cell ${getClass(guessedTeam.conference, mysteryTeam.conference)}">
+                    ${guessedTeam.conference}
+                </div>
+                <div class="guess-cell ${getClass(guessedTeam.division, mysteryTeam.division)}">
+                    ${guessedTeam.division}
+                </div>
+                <div class="guess-cell ${getCapacityClass(guessedTeam.capacity, mysteryTeam.capacity)}">
+                    ${guessedTeam.capacity.toLocaleString()}
+                </div>
+                <div class="guess-cell ${getClass(guessedTeam.lastChampionship, mysteryTeam.lastChampionship)}">
+                    ${guessedTeam.lastChampionship || 'Never'}
+                </div>
+                <div class="guess-cell ${getClass(guessedTeam.mascotType, mysteryTeam.mascotType)}">
+                    ${guessedTeam.mascotType}
+                </div>
+                <div class="guess-cell ${getCityClass(guessedTeam, mysteryTeam)}">
+                    ${guessedTeam.city}
+                </div>
+            `;
+
+            guessGrid.appendChild(row);
+        }
+
+        function showWinMessage() {
+            const stats = getStats();
+            const winMessage = document.getElementById('winMessage');
+            winMessage.className = 'win-message';
+            winMessage.innerHTML = `
+                <div>🏆 Congratulations! 🏆</div>
+                <div style="margin-top: 1rem; font-size: 1.2rem;">
+                    You found the ${mysteryTeam.name} in ${guesses.length} guess${guesses.length === 1 ? '' : 'es'}!
+                </div>
+                <div style="margin-top: 1.5rem; display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <button onclick="shareResults()" class="action-btn">📋 Share</button>
+                </div>
+                <div style="margin-top: 2rem; font-size: 1rem; opacity: 0.9;">
+                    <div><strong>Stats:</strong></div>
+                    <div style="display: flex; gap: 2rem; justify-content: center; margin-top: 0.5rem;">
+                        <div>Played: ${stats.gamesPlayed}</div>
+                        <div>Win Rate: ${stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0}%</div>
+                        <div>Streak: ${stats.currentStreak}</div>
+                        <div>Max: ${stats.maxStreak}</div>
+                    </div>
+                </div>
+            `;
+            searchInput.disabled = true;
+        }
+
+        function giveUp() {
+            if (gameOver || guesses.length === 0) return;
+            
+            gameOver = true;
+            updateStats(false);
+            
+            const stats = getStats();
+            const winMessage = document.getElementById('winMessage');
+            winMessage.className = 'loss-message';
+            winMessage.innerHTML = `
+                <div>The answer was:</div>
+                <div style="margin-top: 1rem; font-size: 1.5rem;">
+                    <strong>${mysteryTeam.name}</strong>
+                </div>
+                <div style="margin-top: 0.5rem; font-size: 1rem; opacity: 0.9;">
+                    ${mysteryTeam.city} | ${mysteryTeam.conference} Conference | ${mysteryTeam.division} Division
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <button onclick="shareResults()" class="action-btn">📋 Share</button>
+                </div>
+                <div style="margin-top: 2rem; font-size: 1rem; opacity: 0.9;">
+                    <div><strong>Stats:</strong></div>
+                    <div style="display: flex; gap: 2rem; justify-content: center; margin-top: 0.5rem;">
+                        <div>Played: ${stats.gamesPlayed}</div>
+                        <div>Win Rate: ${stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0}%</div>
+                        <div>Streak: ${stats.currentStreak}</div>
+                        <div>Max: ${stats.maxStreak}</div>
+                    </div>
+                </div>
+            `;
+            searchInput.disabled = true;
+        }
+
+        function shareResults() {
+            const shareText = generateShareText();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(shareText).then(() => {
+                    alert('Results copied to clipboard!');
+                }).catch(() => {
+                    fallbackShare(shareText);
+                });
+            } else {
+                fallbackShare(shareText);
+            }
+        }
+
+        function fallbackShare(text) {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
+                alert('Results copied to clipboard!');
+            } catch (err) {
+                alert('Could not copy results. Please copy manually:\n\n' + text);
+            }
+            document.body.removeChild(textarea);
+        }
+
+        function showStatsDisplay() {
+            const stats = getStats();
+            const winMessage = document.getElementById('winMessage');
+            winMessage.className = 'win-message';
+            winMessage.innerHTML = `
+                <div>✅ Already Played Today!</div>
+                <div style="margin-top: 1rem; font-size: 1.1rem;">
+                    Come back tomorrow for a new puzzle!
+                </div>
+                <div style="margin-top: 1.5rem;">
+                    <button onclick="shareResults()" class="action-btn">📋 Share</button>
+                </div>
+                <div style="margin-top: 2rem; font-size: 1rem;">
+                    <div><strong>Your Stats:</strong></div>
+                    <div style="display: flex; gap: 2rem; justify-content: center; margin-top: 0.5rem;">
+                        <div>Played: ${stats.gamesPlayed}</div>
+                        <div>Win Rate: ${stats.gamesPlayed > 0 ? Math.round((stats.gamesWon / stats.gamesPlayed) * 100) : 0}%</div>
+                        <div>Streak: ${stats.currentStreak}</div>
+                        <div>Max: ${stats.maxStreak}</div>
+                    </div>
+                </div>
+            `;
+            gameOver = true;
+            searchInput.disabled = true;
+        }
+
+        // Initialize game on load
+        initGame();
+    </script>
+</body>
+</html>
